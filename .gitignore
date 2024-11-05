@@ -1,0 +1,9 @@
+*.session
+*.db
+*_bak
+*.gz
+.env
+.venv/*
+logs/*
+profile_pics/*
+notes
