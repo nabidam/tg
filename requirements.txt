@@ -111,6 +111,7 @@ posthog==3.4.0
 protobuf==4.25.2
 ptyprocess==0.7.0
 pulsar-client==3.4.0
+pyaes==1.6.1
 pyasn1==0.5.1
 pyasn1-modules==0.3.0
 pycodestyle==2.11.1
@@ -122,6 +123,7 @@ pynvim==0.5.0
 PyPika==0.48.9
 pyproject_hooks==1.0.0
 pyright==1.1.352
+PySocks==1.7.1
 python-dateutil==2.8.2
 python-dotenv==1.0.1
 python-jose==3.3.0
@@ -143,6 +145,7 @@ SQLAlchemy==2.0.26
 sshsocksvpn==0.1
 starlette==0.36.3
 sympy==1.12
+Telethon==1.37.0
 tenacity==8.2.3
 tiktoken==0.5.2
 tokenizers==0.15.1
