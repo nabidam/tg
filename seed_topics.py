@@ -83,17 +83,22 @@ async def fetch_group_history():
         )
 
         for topic in topic_result.topics:
-            # save user
-            cursor.execute(
-                """
-                    INSERT INTO topics (id, title)
-                    VALUES (?, ?)
-            """,
-                (topic.id, topic.title),
-            )
-            # Commit the transaction to save changes
-            conn.commit()
-            print(f"{topic.id}:{topic.title} - Saved")
+            topic_id = topic.id
+            cursor.execute("SELECT 1 FROM topics WHERE id = ?", (topic_id,))
+            exists = cursor.fetchone() is not None
+
+            if not exists:
+                # save topic
+                cursor.execute(
+                    """
+                        INSERT INTO topics (id, title)
+                        VALUES (?, ?)
+                """,
+                    (topic.id, topic.title),
+                )
+                # Commit the transaction to save changes
+                conn.commit()
+                print(f"{topic.id}:{topic.title} - Saved")
 
     logger.info("Finished storing topics")
 
