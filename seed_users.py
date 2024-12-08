@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import datetime
 import os
 import sqlite3
+from utils import save_user
 
 load_dotenv()
 
@@ -55,7 +56,7 @@ dialog_title = os.getenv("GROUP_TITLE")
 
 # Create the client
 client = TelegramClient(
-    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 8080)
+    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 2080)
 )
 
 
@@ -74,58 +75,7 @@ async def fetch_group_history():
         users = []
         async for user in client.iter_participants(entity=cc.entity):
             users.append(user)
-            full = await client(GetFullUserRequest(user))
-            bio = full.full_user.about
-            bday = (
-                f"{full.full_user.birthday.year}-{full.full_user.birthday.month}-{full.full_user.birthday.day}"
-                if full.full_user.birthday is not None
-                else None
-            )
-            user_id = user.id
-
-            # save user
-            cursor.execute(
-                """
-                    INSERT INTO users (id, first_name, last_name, username, phone, bday, bio, is_verified, is_bot)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                (
-                    user_id,
-                    user.first_name,
-                    user.last_name,
-                    user.username,
-                    user.phone,
-                    bday,
-                    bio,
-                    user.verified,
-                    user.bot,
-                ),
-            )
-            # Commit the transaction to save changes
-            conn.commit()
-            print(f"{user.username}:{user_id} - Saved")
-
-            photos = await client.get_profile_photos(user)
-
-            # Download each profile photo
-            for i, photo in enumerate(photos):
-                # Generate a filename for each photo
-                file_path = f"profile_pics/{user.id}_{i}.jpg"
-
-                # Download the photo
-                await client.download_media(photo, file_path)
-
-                # save in db
-                cursor.execute(
-                    """
-                    INSERT INTO avatars (id, user_id, path)
-                    VALUES (?, ?, ?)
-                """,
-                    (photo.id, user_id, file_path),
-                )
-                # Commit the transaction to save changes
-                conn.commit()
-                print(f"Downloaded {file_path}")
+            await save_user(user, client, conn)
 
         print(len(users))
 
