@@ -6,4 +6,5 @@
 .venv/*
 logs/*
 profile_pics/*
+files/*
 notes
