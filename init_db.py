@@ -30,7 +30,61 @@ CREATE TABLE IF NOT EXISTS avatars (
 """
 )
 
+cursor.execute(
+    """
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY,
+    date TEXT,
+    edit_date TEXT,
+    message TEXT,
+    raw_text TEXT,
+    is_reply BOOLEAN,
+    reply_to INTEGER,
+    topic_id INTEGER,
+    sender_id INTEGER,
+    is_sticker BOOLEAN,
+    sticker_emoji TEXT
+)
+"""
+)
+
+cursor.execute(
+    """
+CREATE TABLE IF NOT EXISTS reactions (
+    user_id INTEGER,
+    msg_id INTEGER,
+    emoticon TEXT,
+    PRIMARY KEY (user_id, msg_id)
+)
+"""
+)
+
+cursor.execute(
+    """
+CREATE TABLE IF NOT EXISTS topics (
+    id INTEGER PRIMARY KEY,
+    title TEXT
+)
+"""
+)
+
+# TODO: add msg_id to files
+
+cursor.execute(
+    """
+CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY,
+    ext TEXT,
+    height INTEGER,
+    width INTEGER,
+    mime_type TEXT,
+    size INTEGER,
+    path TEXT
+)
+"""
+)
+
 conn.commit()
 conn.close()
 
-print("Database and users table created successfully.")
+print("Database and tables created successfully.")
