@@ -85,6 +85,10 @@ async def fetch_group_history():
         # df.to_csv("users.csv")
         print(len(users))
 
+        users_df = pd.DataFrame(columns=["user_id"])
+        users_df["user_id"] = users
+        users_df.to_csv("users_nov.csv", index=False)
+
     gone_users = []
     for idx, row in old_data.iterrows():
         if row["user_id"] not in users:
