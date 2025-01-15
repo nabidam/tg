@@ -65,7 +65,7 @@ cursor = conn.cursor()
 
 cursor.execute(
     """
-SELECT messages.raw_text, users.id, users.first_name, users.last_name, users.username 
+SELECT messages.id, messages.raw_text, users.id, users.first_name, users.last_name, users.username 
 FROM messages 
 JOIN users ON users.id = messages.sender_id 
 WHERE 
@@ -88,7 +88,7 @@ for idx, vasher in enumerate(vashers):
     if idx < 16:
         continue
 
-    msg = vasher[0]
+    msg = vasher[1]
     if not msg:
         continue
 
@@ -103,8 +103,8 @@ for idx, vasher in enumerate(vashers):
     if is_only_emojis(msg) or len(msg) < 20:
         continue
 
-    first_name = vasher[2] if vasher[2] else ""
-    last_name = vasher[3] if vasher[3] else ""
+    first_name = vasher[3] if vasher[3] else ""
+    last_name = vasher[4] if vasher[4] else ""
 
     # batch
     task_id = f"faal-{idx}"
@@ -125,9 +125,9 @@ for idx, vasher in enumerate(vashers):
     batch_tasks.append(task)
 
     new_row = {
-        "user_id": vasher[1],
-        "username": vasher[4],
-        "message": vasher[0],
+        "user_id": vasher[2],
+        "username": vasher[5],
+        "message": vasher[1],
         "sender": first_name + " " + last_name,
         "task_id": task_id,
         "faal": "",
