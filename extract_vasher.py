@@ -125,6 +125,7 @@ for idx, vasher in enumerate(vashers):
     batch_tasks.append(task)
 
     new_row = {
+        "id": vasher[0],
         "user_id": vasher[2],
         "username": vasher[5],
         "message": vasher[1],
