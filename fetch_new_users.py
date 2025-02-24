@@ -61,7 +61,7 @@ client = TelegramClient(
     "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 2080)
 )
 
-old_data_dir = "users_dec.csv"
+old_data_dir = "users_jan.csv"
 old_data = pd.read_csv(old_data_dir)
 
 
@@ -87,12 +87,13 @@ async def fetch_group_history():
 
         users_df = pd.DataFrame(columns=["user_id"])
         users_df["user_id"] = users
-        users_df.to_csv("users_nov.csv", index=False)
+        users_df.to_csv("users_feb.csv", index=False)
 
     gone_users = []
     for idx, row in old_data.iterrows():
         if row["user_id"] not in users:
-            cursor.execute("SELECT * FROM users WHERE id = ?", (str(row["user_id"]),))
+            cursor.execute("SELECT * FROM users WHERE id = ?",
+                           (str(row["user_id"]),))
             user = cursor.fetchone()
             if user is not None:
                 this_dict = {
@@ -105,7 +106,7 @@ async def fetch_group_history():
 
     gone_df = pd.DataFrame(gone_users)
 
-    gone_df.to_csv("gone_dec.csv", index=False)
+    gone_df.to_csv("gone_jan.csv", index=False)
 
     logger.info("Finished fetching group history")
 
