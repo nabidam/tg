@@ -46,10 +46,10 @@ log_file_handler.setFormatter(formatter)
 logger.addHandler(log_file_handler)
 
 
-conn = sqlite3.connect("db.db")
-conn.set_trace_callback(print)
+# conn = sqlite3.connect("db.db")
+# conn.set_trace_callback(print)
 
-cursor = conn.cursor()
+# cursor = conn.cursor()
 
 # Use your own values from my.telegram.org
 api_id = os.getenv("API_ID")
@@ -91,9 +91,9 @@ async def fetch_group_history():
 
                 file_path = f"avatars/{user.id}.jpg"
 
-                if not os.path.exists(file_path):
-                    # Download the photo
-                    await client.download_media(photo, file_path)
+                # if not os.path.exists(file_path):
+                # Download the photo
+                await client.download_media(photo, file_path)
 
                 print(f"Downloaded {file_path}")
 
