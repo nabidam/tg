@@ -47,6 +47,6 @@ df = pd.read_csv("vashers.csv")
 
 result = df.groupby("username").size().reset_index(name="count")
 result = result.sort_values(by="count", ascending=True)
-result = result[["username", "count"]]
+result = result[["username", "sender", "count"]]
 
 result.to_csv("stats_vasher.csv", index=False)
