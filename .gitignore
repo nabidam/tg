@@ -8,3 +8,9 @@ logs/*
 profile_pics/*
 files/*
 notes
+avatars/*
+farayande/*
+org_avatars/*
+
+*.pyc
+**/*.pyc
