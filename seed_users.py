@@ -10,6 +10,7 @@ import datetime
 import os
 import sqlite3
 from utils import save_user
+import pandas as pd
 
 load_dotenv()
 
@@ -74,9 +75,11 @@ async def fetch_group_history():
     if cc:
         users = []
         async for user in client.iter_participants(entity=cc.entity):
-            users.append(user)
+            # users.append({"user_id": user.id, "active": True})
             await save_user(user, client, conn)
 
+        # df = pd.DataFrame(users)
+        # df.to_csv("users.csv")
         print(len(users))
 
     logger.info("Finished fetching group history")
