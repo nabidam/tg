@@ -14,3 +14,4 @@ org_avatars/*
 
 *.pyc
 **/*.pyc
+.qodo
