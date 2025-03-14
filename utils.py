@@ -216,3 +216,65 @@ async def save_message(message: Message, client: TelegramClient, conn: Connectio
         return True
     else:
         return False
+
+
+async def save_msg_file(message: Message, client: TelegramClient, dl_folder: str = None):
+    # check for id in db
+    msg_id = message.id
+
+    # check for file
+    has_file = False
+    sent_file = None
+    msg_file = message.file
+    msg_document = message.document
+    msg_photo = message.photo
+    msg_video = message.video
+    if msg_file is not None:
+        ext = msg_file.ext
+        height = msg_file.height
+        width = msg_file.width
+        mime_type = msg_file.mime_type
+        size = msg_file.size
+        sent_file = msg_file.media
+    elif msg_photo is not None:
+        ext = ".jpg"
+        height = None
+        width = None
+        mime_type = None
+        size = None
+        sent_file = msg_photo
+    elif msg_video is not None:
+        ext = ".mp4"
+        height = None
+        width = None
+        mime_type = None
+        size = None
+        sent_file = msg_video
+
+    if sent_file is not None:
+        file_id = sent_file.id
+
+        file_path = f"{dl_folder}/{msg_id}_{file_id}.{ext}" if dl_folder is not None else f"gp/{msg_id}_{file_id}.{ext}"
+
+        dl = None
+        if not os.path.exists(file_path):
+            print(f"[INFO] msg has file, downloading ...")
+            # Download the photo
+            dl = await client.download_media(sent_file, file_path)
+        else:
+            print(f"File exists: {file_id}")
+
+        if dl is not None:
+
+            has_file = True
+
+            # save in db
+            # Commit the transaction to save changes
+            print(f"Downloaded {file_path}")
+        else:
+            print(f"Coud'nt download {file_id}")
+            return False
+
+    # Commit the transaction to save changes
+    print(f"msg id {msg_id} saved")
+    return True
