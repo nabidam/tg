@@ -58,7 +58,7 @@ dialog_title = os.getenv("GROUP_TITLE")
 
 # Create the client
 client = TelegramClient(
-    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 2080)
+    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 8080)
 )
 
 
@@ -102,7 +102,7 @@ async def fetch_group_history():
                 "username": user.username,
                 "first_name": user.first_name,
                 "last_name": user.last_name,
-                "avatar": file_path
+                "avatar": None if not file_path else "static/" + file_path
             }
             users.append(this_user)
 
