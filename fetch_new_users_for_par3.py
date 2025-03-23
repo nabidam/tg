@@ -58,7 +58,7 @@ dialog_title = os.getenv("GROUP_TITLE")
 
 # Create the client
 client = TelegramClient(
-    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 8080)
+    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 2080)
 )
 
 
