@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 import datetime
 import os
 import sqlite3
+from utils import save_message
+from time import sleep
+import shutil
 
 load_dotenv()
 
@@ -43,20 +46,17 @@ log_file_handler.setFormatter(formatter)
 # Add the handler to the logger
 logger.addHandler(log_file_handler)
 
-
-conn = sqlite3.connect("db.db")
-
-cursor = conn.cursor()
-
 # Use your own values from my.telegram.org
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
-group_id = os.getenv("GROUP_ID")
+group_title = os.getenv("GROUP_TITLE")
 
 # Create the client
 client = TelegramClient(
     "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 2080)
 )
+
+# TODO: limit large files
 
 
 async def fetch_group_history():
@@ -64,89 +64,84 @@ async def fetch_group_history():
 
     dialogs = await client.get_dialogs()
 
-    topic_result = await client(
-        functions.channels.GetForumTopicsRequest(
-            channel=dialogs[0].entity.id,
-            offset_date=0,
-            offset_id=0,
-            offset_topic=0,
-            limit=100,
-            # q='some string here'
-        )
-    )
+    cc = None
+    for d in dialogs:
+        if d.title == group_title:
+            cc = d
+            break
 
-    topics = {
-        topic.id: {"title": topic.title, "top_msg_id": topic.top_message, "msgs": []}
-        for topic in topic_result.topics
-    }
+    if cc:
+        # fetch latest msg id
+        conn = sqlite3.connect("db.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM messages LIMIT 1")
+        latest_msg = cursor.fetchone()
+        conn.close()
 
-    users = []
-    async for user in client.iter_participants(entity=dialogs[0].entity):
-        users.append(user)
-        full = await client(GetFullUserRequest(user))
-        bio = full.full_user.about
-        bday = (
-            f"{full.full_user.birthday.year}-{full.full_user.birthday.month}-{full.full_user.birthday.day}"
-            if full.full_user.birthday is not None
-            else None
-        )
-        user_id = user.id
+        last_msg_id = None
+        # current_msg_id = latest_msg[0]
+        current_msg_id = 0
+        messages = []
+        while current_msg_id != last_msg_id:
+            async for message in client.iter_messages(
+                cc.entity.id, limit=1000, offset_id=current_msg_id
+            ):
+                print(f"[INFO] Processing msg_id: {message.id}")
+                # check for disk
+                total, used, free = shutil.disk_usage("/home/navid")
+                if free < 1024 * 1024 * 100:
+                    raise RuntimeError(
+                        "Disk space is below 100 MB! Exiting application."
+                    )
+                # print(message)
+                conn = sqlite3.connect("db.db")
+                await save_message(message, client, conn)
+                conn.close()
+                # Log message details
+                logger.info(
+                    f"Message from user {message.sender_id} at {message.date}: {message.text}"
+                )
 
-        # save user
-        cursor.execute(
-            """
-                INSERT INTO users (id, first_name, last_name, username, phone, bday, bio, is_verified, is_bot)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-            (
-                user_id,
-                user.first_name,
-                user.last_name,
-                user.username,
-                user.phone,
-                bday,
-                bio,
-                user.verified,
-                user.bot,
-            ),
-        )
-        # Commit the transaction to save changes
-        conn.commit()
-        print(f"{user.username}:{user_id} - Saved")
+                # if message.document or message.file or message.forward:
+                #     print("got")
 
-        photos = await client.get_profile_photos(user)
+                # if message.reply_to is None:
+                #     print(f"Message: {message.message}")
+                #     print(f"is in GENERAL")
+                #     continue
 
-        # Download each profile photo
-        for i, photo in enumerate(photos):
-            # Generate a filename for each photo
-            file_path = f"profile_pics/{user.id}_{i}.jpg"
+                messages.append(message)
+                last_msg_id = current_msg_id
+                current_msg_id = message.id
 
-            # Download the photo
-            await client.download_media(photo, file_path)
+                # msg = {
+                #     "id": message.id,
+                #     "message": message.message,
+                #     "raw_text": message.raw_text,
+                #     "topic_id": (
+                #         message.reply_to.reply_to_top_id
+                #         if message.reply_to.reply_to_top_id is not None
+                #         else message.reply_to_msg_id
+                #     ),
+                #     "reply_to": message.reply_to_msg_id,
+                #     "from_id": message.from_id.user_id,
+                #     "date": message.date,
+                # }
 
-            # save in db
-            cursor.execute(
-                """
-                INSERT INTO avatars (id, user_id, path)
-                VALUES (?, ?, ?)
-            """,
-                (photo.id, user_id, file_path),
-            )
-            # Commit the transaction to save changes
-            conn.commit()
-            print(f"Downloaded {file_path}")
+                # topics[msg["topic_id"]]["msgs"].append(msg)
+                # print(f"Message: {message.text}")
 
-    print(len(users))
+            # # Optionally log replies and mentions
+            # if message.is_reply:
+            #     logger.info(f"Message {message.id} is a reply to message {
+            #                 message.reply_to_msg_id}")
+            # if message.mentions:
+            #     logger.info(f"Message {message.id} contains mentions: {
+            #                 message.mentioned_ids}")
+        print(f"SLEEPING 3s Zzzzz.")
+        sleep(3)
 
-    """
-        bot bool
-        first_name str
-        id int
-        last_name str
-        username str
-        phone str
-        verified bool
-    """
+    logger.info("Finished fetching group history")
 
 
 # Start the Telegram client
