@@ -11,6 +11,7 @@ notes
 avatars/*
 farayande/*
 org_avatars/*
+avatars_old/*
 
 *.pyc
 **/*.pyc
