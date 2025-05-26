@@ -91,11 +91,13 @@ async def fetch_group_history():
 
                 file_path = f"avatars/{user.id}.jpg"
 
-                # if not os.path.exists(file_path):
-                # Download the photo
-                await client.download_media(photo, file_path)
+                if not os.path.exists(file_path):
+                    # Download the photo
+                    await client.download_media(photo, file_path)
 
-                print(f"Downloaded {file_path}")
+                    print(f"Downloaded {file_path}")
+                else:
+                    print(f"Already has Downloaded {file_path}")
 
             this_user = {
                 "tg_id": user.id,
