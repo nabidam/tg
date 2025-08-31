@@ -97,7 +97,7 @@ system_prompt = """
 
 db_columns = ["user_id", "username", "vasher", "sender"]
 
-with open("new_vasher.sql", "w") as sql_file:
+with open("020925_new_vasher.sql", "w") as sql_file:
     for idx, vasher in enumerate(vashers):
         # if idx < 16:
         #     continue
@@ -170,7 +170,7 @@ with open("new_vasher.sql", "w") as sql_file:
 
 df = pd.DataFrame(data)
 
-df.to_csv("new_vashers.csv", index=False)
+df.to_csv("020925_new_vashers.csv", index=False)
 
 file_name = "new_batch.jsonl"
 
