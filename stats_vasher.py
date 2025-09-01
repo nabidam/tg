@@ -43,10 +43,13 @@ log_file_handler.setFormatter(formatter)
 # Add the handler to the logger
 logger.addHandler(log_file_handler)
 
-df = pd.read_csv("vashers.csv")
+df = pd.read_csv("/home/navid/Projects/divineaty/vashers_202509021440.csv")
 
-result = df.groupby("username").size().reset_index(name="count")
-result = result.sort_values(by="count", ascending=True)
+counts = df.groupby("username").size().reset_index(name="count")
+# counts = df["username"].value_counts()
+# df["count"] = df["username"].map(counts)
+df = df.merge(counts, on="username")
+result = df.sort_values(by="count", ascending=True)
 result = result[["username", "sender", "count"]]
 
 result.to_csv("stats_vasher.csv", index=False)
