@@ -2,14 +2,26 @@ import argparse
 import sys
 import os
 import logging
+from datetime import datetime, timedelta
+import re
 from logging.handlers import TimedRotatingFileHandler
 from time import sleep
 from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon import functions, types
 from telethon.tl.functions.channels import GetForumTopicsRequest
-from telethon.tl.functions.messages import CheckChatInviteRequest
+from telethon.tl.functions.messages import (
+    CheckChatInviteRequest,
+    GetMessageReactionsListRequest,
+)
 from telethon.tl.functions.users import GetFullUserRequest
+from telethon.tl.types import (
+    PeerChannel,
+    PeerChat,
+    MessageReactions,
+    ReactionEmoji,
+    ReactionCustomEmoji,
+)
 
 load_dotenv()
 
@@ -52,6 +64,74 @@ client = TelegramClient(
 )
 
 
+def make_naive(dt):
+    """Convert timezone-aware datetime to naive by removing tzinfo."""
+    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def parse_date_spec(date_str):
+    """
+    Parse date spec like '1D', '2M' into a timedelta or equivalent.
+    Returns: (unit, quantity) e.g., ('D', 1), ('M', 3)
+    """
+    if not date_str:
+        return None, None
+
+    match = re.match(r"^(\d+)([DM])$", date_str.upper())
+    if not match:
+        return None, None
+
+    quantity = int(match.group(1))
+    unit = match.group(2)
+    return unit, quantity
+
+
+def get_date_range(date_spec):
+    """
+    Given a date spec like '1M' or '5D', returns (start_date, end_date)
+    where end_date = now, and start_date = now - delta
+    """
+    unit, quantity = parse_date_spec(date_spec)
+    if not unit:
+        raise ValueError(f"Invalid date spec: {date_spec}")
+
+    now = datetime.now()
+    if unit == "D":
+        start_date = now - timedelta(days=quantity)
+    elif unit == "M":
+        # Approximate: subtract quantity * 30 days (for simplicity)
+        # For production, consider using `dateutil.relativedelta`
+        start_date = now - timedelta(days=quantity * 30)
+    else:
+        raise ValueError(f"Unsupported unit: {unit}")
+
+    return start_date, now
+
+
+def is_date_in_range(date_to_check, date_spec):
+    """
+    Check if a datetime object falls within the range defined by date_spec.
+    Handles both naive and aware datetimes by converting to naive.
+    """
+    try:
+        start_date, end_date = get_date_range(date_spec)
+
+        # Strip timezone info for safe comparison
+        date_to_check = make_naive(date_to_check)
+        start_date = make_naive(start_date)
+        end_date = make_naive(end_date)
+
+        return start_date <= date_to_check <= end_date
+    except ValueError:
+        return False
+
+
+def validate_date_format(date_str):
+    """Validate that date string is in format nD or nM"""
+    unit, quantity = parse_date_spec(date_str)
+    return unit is not None
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Process user activity with optional topic and date filters."
@@ -59,7 +139,7 @@ def parse_arguments():
 
     # Required argument
     parser.add_argument(
-        "--user_id", type=int, required=True, help="User ID (bigint integer, required)"
+        "--user_id", type=int, required=False, help="User ID (bigint integer, required)"
     )
 
     # Optional arguments
@@ -81,28 +161,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def validate_date_format(date_str):
-    """Validate that date string is in format nD or nM where n is a positive integer"""
-    if not date_str:
-        return False
-
-    if len(date_str) < 2:
-        return False
-
-    # Last character should be D or M
-    unit = date_str[-1].upper()
-    if unit not in ["D", "M"]:
-        return False
-
-    # Everything except last character should be digits
-    number_part = date_str[:-1]
-    if not number_part.isdigit() or int(number_part) <= 0:
-        return False
-
-    return True
-
-
-async def fetch_reactions():
+async def fetch_reactions(user_id=575570675, topic_id=None, date_period=None):
     logger.info("Started fetching reactions...")
 
     dialogs = await client.get_dialogs()
@@ -118,17 +177,66 @@ async def fetch_reactions():
         # current_msg_id = latest_msg[0]
         current_msg_id = 0
         messages = []
-        while current_msg_id != last_msg_id:
+        reactions = {}
+        done = False
+        while current_msg_id != last_msg_id and not done:
             async for message in client.iter_messages(
                 cc.entity.id, limit=1000, offset_id=current_msg_id
             ):
                 print(f"[INFO] Processing msg_id: {message.id}")
                 messages.append(message)
+                sender = message.sender
+
+                in_range = is_date_in_range(message.date, date_period)
+
+                if not in_range:
+                    logger.info("All messages in the date range analized.")
+                    done = True
+                    break
+
+                if message.reactions:
+                    reactions_counts = [ra.count for ra in message.reactions.results]
+                    reactions_count = sum(reactions_counts)
+                    # print(f"Total reactions: {reactions_count}")
+                    for reaction_count in message.reactions.results:
+                        emoji = (
+                            reaction_count.reaction.emoticon
+                            if isinstance(reaction_count.reaction, ReactionEmoji)
+                            else "[Custom]"
+                        )
+                        # print(f"Emoji: {emoji} | Count: {reaction_count.count}")
+
+                    result = await client(
+                        GetMessageReactionsListRequest(
+                            peer=cc.entity, id=message.id, limit=100
+                        )
+                    )
+
+                    for ra in result.reactions:
+                        if ra.peer_id.user_id == user_id:
+                            if sender.id in reactions:
+                                reactions[sender.id]["count"] += 1
+                            else:
+                                reactions[sender.id] = {
+                                    "count": 1,
+                                    "username": sender.username,
+                                    "first_name": sender.first_name,
+                                    "last_name": sender.last_name,
+                                }
+                    # result = await client(GetReactionsRequest(
+                    #     peer=chat,
+                    #     id=message.id,
+                    #     limit=100  # adjust as needed
+                    # ))
+                    # print(result)
                 last_msg_id = current_msg_id
                 current_msg_id = message.id
+
+                # sleep(1)
             print(f"SLEEPING 3s Zzzzz.")
             sleep(3)
 
+        print(reactions)
     logger.info("Finished fetching reactions.")
 
 
@@ -155,7 +263,7 @@ async def main():
     await client.start()
     logger.info("Connected to Telegram API")
 
-    await fetch_group_history()
+    await fetch_reactions(user_id, topic_id, date_period)
     logger.info("Group history fetched successfully")
 
 
