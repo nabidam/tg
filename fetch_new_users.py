@@ -58,10 +58,10 @@ dialog_title = os.getenv("GROUP_TITLE")
 
 # Create the client
 client = TelegramClient(
-    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 2080)
+    "session_name", api_id, api_hash, proxy=("socks5", "127.0.0.1", 10808)
 )
 
-old_data_dir = "users_250525.csv"
+old_data_dir = "users_220825.csv"
 old_data = pd.read_csv(old_data_dir)
 
 
@@ -87,7 +87,7 @@ async def fetch_group_history():
 
         users_df = pd.DataFrame(columns=["user_id"])
         users_df["user_id"] = users
-        users_df.to_csv("users_050725.csv", index=False)
+        users_df.to_csv("users_250925.csv", index=False)
 
     gone_users = []
     for idx, row in old_data.iterrows():
@@ -106,7 +106,7 @@ async def fetch_group_history():
 
     gone_df = pd.DataFrame(gone_users)
 
-    gone_df.to_csv("gone_050725.csv", index=False)
+    gone_df.to_csv("gone_250925.csv", index=False)
 
     logger.info("Finished fetching group history")
 
